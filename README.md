@@ -72,7 +72,7 @@ Cobre validações de quantidade/valor, e-mail, rate-limit, tratamento de erros 
 
 ## Implantação (Cloudflare Workers + D1)
 
-O deploy usa **Cloudflare Workers + D1** (o SQLite gerenciado do Cloudflare), garantindo dados **persistentes** na nuvem. Endpoint publicado: `https://bom-recheio.almoxarifado-online-nortel.workers.dev`.
+O deploy usa **Cloudflare Workers + D1** (o SQLite gerenciado do Cloudflare), garantindo dados **persistentes** na nuvem. Endpoint publicado: `https://bom-recheio.bomrecheio.workers.dev`.
 
 Pré-requisitos: `wrangler` (este repo já o traz) e conta no Cloudflare.
 
