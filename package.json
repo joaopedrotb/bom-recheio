@@ -5,14 +5,18 @@
   "main": "server.js",
   "type": "commonjs",
   "scripts": {
-    "start": "node server.js"
+    "start": "node server.js",
+    "deploy": "wrangler deploy",
+    "dev:cf": "wrangler dev"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",
     "express": "^4.21.2",
+    "jose": "^5.9.6",
     "jsonwebtoken": "^9.0.2"
   },
   "devDependencies": {
-    "puppeteer-core": "^25.11.0"
+    "puppeteer-core": "^25.11.0",
+    "wrangler": "^4.135.0"
   }
 }

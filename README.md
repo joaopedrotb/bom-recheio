@@ -71,9 +71,26 @@ node test/regression.js
 Cobre validações de quantidade/valor, e-mail, rate-limit, tratamento de erros 413/400, exclusão de lançamentos e headers de segurança. Resultado da auditoria original: **22 casos executados, 0 falhas** após as correções.
 
 ## Implantação (Cloudflare Workers + D1)
-*(em preparação — os arquivos `wrangler.jsonc`, `src/` e `data/schema.sql` são adicionados junto com o deploy)*
 
-O deploy usa **Cloudflare Workers + D1** (o SQLite gerenciado do Cloudflare), garantindo dados **persistentes** na nuvem.
+O deploy usa **Cloudflare Workers + D1** (o SQLite gerenciado do Cloudflare), garantindo dados **persistentes** na nuvem. Endpoint publicado: `https://bom-recheio.almoxarifado-online-nortel.workers.dev`.
+
+Pré-requisitos: `wrangler` (este repo já o traz) e conta no Cloudflare.
+
+```bash
+wrangler login                          # autoriza no navegador (uma vez)
+wrangler d1 create bom-recheio          # anote o database_id
+wrangler kv namespace create bom-recheio-rate   # anote o id
+```
+
+Edite `wrangler.jsonc` com os IDs gerados (binding `DB` para o D1 e `RATE` para o KV), aplique o schema e proteja o token:
+
+```bash
+wrangler d1 execute bom-recheio --remote --file=data/schema.sql
+wrangler secret put JWT_SECRET          # segredo do token JWT (não vai pro repo)
+wrangler deploy
+```
+
+Os assets estáticos (`public/`) são servidos pelo **Workers Static Assets** com headers de segurança via `public/_headers`; `/api/*` é roteado para o Worker com persistência no D1. Para rodar o Worker localmente: `wrangler dev` (usa schema de `data/schema.sql` e o segredo de `.dev.vars`).
 
 ## Licença
 

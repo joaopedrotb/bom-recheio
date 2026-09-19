@@ -1,0 +1,26 @@
+{
+  "name": "bom-recheio",
+  "main": "src/index.js",
+  "compatibility_date": "2026-09-18",
+  "compatibility_flags": ["nodejs_compat"],
+  "assets": {
+    "directory": "./public",
+    "not_found_handling": "single-page-application"
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "bom-recheio",
+      "database_id": "55cd62f8-1639-4e7e-b5ab-7fe0809adaca"
+    }
+  ],
+  "kv_namespaces": [
+    {
+      "binding": "RATE",
+      "id": "dda9d70726434925860d015a357c544e"
+    }
+  ],
+  "observability": {
+    "enabled": true
+  }
+}
