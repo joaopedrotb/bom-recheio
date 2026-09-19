@@ -99,9 +99,24 @@
             <input type="number" inputmode="numeric" id="sale-qty" min="1" max="100000" step="1" value="1" required>
           </label>
           <label class="field">
-            <span class="label">Valor recebido (R$)</span>
-            <input type="text" inputmode="decimal" id="sale-amount" placeholder="0,00" maxlength="15" required>
+            <span class="label">Valor dos produtos (R$)</span>
+            <input type="text" inputmode="decimal" id="sale-products" placeholder="0,00" maxlength="15" required>
           </label>
+        </div>
+        <div class="field" role="radiogroup" aria-label="Entrega">
+          <span class="label">Entrega</span>
+          <div class="seg" id="delivery-seg">
+            <button type="button" class="seg-btn active" data-val="0" aria-pressed="true">Sem entrega</button>
+            <button type="button" class="seg-btn" data-val="1" aria-pressed="false">Com entrega</button>
+          </div>
+        </div>
+        <label class="field hidden" id="delivery-field">
+          <span class="label">Valor da entrega (R$)</span>
+          <input type="text" inputmode="decimal" id="delivery-amount" value="3,00" placeholder="0,00" maxlength="15">
+        </label>
+        <div class="field">
+          <span class="label">Total a receber (R$)</span>
+          <div class="total-display" id="sale-total">R$ 0,00</div>
         </div>
         <label class="field">
           <span class="label">Quem comprou</span>
@@ -121,13 +136,32 @@
       <form id="expense-form" class="panel hidden" novalidate>
         <h2 class="panel-title">Registrar despesa</h2>
         <label class="field">
-          <span class="label">Categoria</span>
-          <select id="expense-category">
-            <option value="ingredientes">Ingredientes</option>
-            <option value="gas">Gás</option>
-            <option value="embalagem">Embalagem</option>
-            <option value="transporte">Transporte</option>
-            <option value="outros">Outros</option>
+          <span class="label">Despesa</span>
+          <select id="expense-item">
+            <option value="farinha-trigo" data-desc="Farinha de Trigo" data-amount="216,00">Farinha de Trigo — R$ 216,00</option>
+            <option value="margarina-oleo" data-desc="Margarina ou óleo" data-amount="119,94">Margarina ou óleo — R$ 119,94</option>
+            <option value="creme-cebola" data-desc="Creme de Cebola" data-amount="0,00">Creme de Cebola — R$ 0,00</option>
+            <option value="leite" data-desc="Leite" data-amount="0,00">Leite — R$ 0,00</option>
+            <option value="oleo-fritar" data-desc="Óleo para fritar" data-amount="101,71">Óleo para fritar — R$ 101,71</option>
+            <option value="peito-frango" data-desc="Peito de Frango" data-amount="120,00">Peito de Frango — R$ 120,00</option>
+            <option value="cebola" data-desc="Cebola" data-amount="30,00">Cebola — R$ 30,00</option>
+            <option value="ligante" data-desc="Ligante" data-amount="44,00">Ligante — R$ 44,00</option>
+            <option value="pimenta-calabresa" data-desc="Pimenta Calabresa" data-amount="19,20">Pimenta Calabresa — R$ 19,20</option>
+            <option value="sal" data-desc="Sal" data-amount="3,36">Sal — R$ 3,36</option>
+            <option value="salsinha" data-desc="Salsinha" data-amount="12,00">Salsinha — R$ 12,00</option>
+            <option value="agua" data-desc="Água" data-amount="32,00">Água — R$ 32,00</option>
+            <option value="caldo-galinha" data-desc="Caldo de Galinha" data-amount="35,00">Caldo de Galinha — R$ 35,00</option>
+            <option value="queijo-mucarela" data-desc="Queijo Muçarela" data-amount="288,00">Queijo Muçarela — R$ 288,00</option>
+            <option value="presunto" data-desc="Presunto" data-amount="40,00">Presunto — R$ 40,00</option>
+            <option value="alho" data-desc="Alho" data-amount="7,20">Alho — R$ 7,20</option>
+            <option value="luz" data-desc="Luz" data-amount="60,00">Luz — R$ 60,00</option>
+            <option value="carne-moida" data-desc="Carne Moída" data-amount="196,00">Carne Moída — R$ 196,00</option>
+            <option value="empanamento" data-desc="Empanamento" data-amount="214,80">Empanamento — R$ 214,80</option>
+            <option value="salsicha" data-desc="Salsicha" data-amount="26,00">Salsicha — R$ 26,00</option>
+            <option value="detergente" data-desc="Detergente" data-amount="18,00">Detergente — R$ 18,00</option>
+            <option value="kibizin" data-desc="Kibizin" data-amount="90,30">Kibizin — R$ 90,30</option>
+            <option value="tempero" data-desc="Tempero" data-amount="16,00">Tempero — R$ 16,00</option>
+            <option value="outros">Outros (digitar outro item)</option>
           </select>
         </label>
         <label class="field">

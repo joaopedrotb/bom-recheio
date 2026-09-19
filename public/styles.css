@@ -177,6 +177,13 @@ body {
 
 .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 
+.total-display {
+  padding: 12px 13px; font-size: 18px; font-weight: 700;
+  border: 1.5px solid var(--border); border-radius: 11px;
+  background: var(--gold-soft); color: var(--brown);
+  font-variant-numeric: tabular-nums;
+}
+
 /* segmented */
 .seg { display: flex; gap: 6px; flex-wrap: wrap; }
 

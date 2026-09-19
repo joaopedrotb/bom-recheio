@@ -189,6 +189,7 @@
 
   let salePkg = 100;
   let salePay = 'dinheiro';
+  let saleDelivery = false;
 
   function bindSeg(containerId, onChange) {
     const container = $(containerId);
@@ -207,9 +208,25 @@
 
   bindSeg('pkg-seg', (v) => { salePkg = Number(v); });
   bindSeg('pay-seg', (v) => { salePay = v; });
+  bindSeg('delivery-seg', (v) => {
+    saleDelivery = v === '1';
+    $('delivery-field').classList.toggle('hidden', !saleDelivery);
+    updateSaleTotal();
+  });
 
-  bindMoneyInput('sale-amount');
+  bindMoneyInput('sale-products');
+  bindMoneyInput('delivery-amount');
   bindMoneyInput('expense-amount');
+
+  function updateSaleTotal() {
+    const products = parseMoney($('sale-products').value);
+    const delivery = saleDelivery ? parseMoney($('delivery-amount').value) : 0;
+    const total = (Number.isFinite(products) ? products : 0) + (Number.isFinite(delivery) ? delivery : 0);
+    $('sale-total').textContent = formatMoney(total);
+  }
+
+  $('sale-products').addEventListener('input', updateSaleTotal);
+  $('delivery-amount').addEventListener('input', updateSaleTotal);
 
   function toggleForm(formId, exceptId) {
     const other = $(exceptId);
@@ -219,9 +236,11 @@
     form.classList.toggle('hidden', !willOpen);
     if (willOpen) {
       if (formId === 'sale-form') {
+        updateSaleTotal();
         $('sale-buyer').focus();
       } else {
-        $('expense-desc').focus();
+        applyExpenseItem();
+        $('expense-item').focus();
       }
     }
   }
@@ -229,15 +248,33 @@
   $('btn-sale').addEventListener('click', () => toggleForm('sale-form', 'expense-form'));
   $('btn-expense').addEventListener('click', () => toggleForm('expense-form', 'sale-form'));
 
+  function applyExpenseItem() {
+    const sel = $('expense-item');
+    const opt = sel.options[sel.selectedIndex];
+    const desc = (opt.dataset.desc || '').trim();
+    const amount = (opt.dataset.amount || '').trim();
+    const val = parseMoney(amount);
+    const editable = sel.value === 'outros' || !Number.isFinite(val) || val <= 0;
+    $('expense-desc').value = desc;
+    $('expense-amount').value = amount;
+    $('expense-desc').readOnly = !editable;
+    $('expense-amount').readOnly = !editable;
+  }
+
+  $('expense-item').addEventListener('change', applyExpenseItem);
+
   $('sale-form').addEventListener('submit', async (e) => {
     e.preventDefault();
     const rawQty = Number($('sale-qty').value);
-    const amount = parseMoney($('sale-amount').value);
+    const products = parseMoney($('sale-products').value);
+    const delivery = saleDelivery ? parseMoney($('delivery-amount').value) : 0;
     const buyer = $('sale-buyer').value.trim();
     if (!Number.isInteger(rawQty)) return toast('Quantidade deve ser um número inteiro.', 'err');
     if (rawQty < 1 || rawQty > MAX_QUANTITY) return toast('Quantidade deve ser de 1 até ' + MAX_QUANTITY + ' pacotes.', 'err');
     if (!buyer) return toast('Informe quem comprou.', 'err');
-    if (!Number.isFinite(amount) || amount <= 0) return toast('Informe o valor recebido (maior que zero).', 'err');
+    if (!Number.isFinite(products) || products <= 0) return toast('Informe o valor dos produtos (maior que zero).', 'err');
+    if (!Number.isFinite(delivery) || delivery < 0) return toast('Informe um valor de entrega válido.', 'err');
+    const amount = products + delivery;
 
     const btn = $('sale-submit');
     btn.disabled = true;
@@ -247,9 +284,10 @@
         body: JSON.stringify({ package_size: salePkg, quantity: rawQty, buyer, payment_method: salePay, amount }),
       });
       toast('Venda registrada ✔', 'ok');
-      $('sale-amount').value = '';
+      $('sale-products').value = '';
       $('sale-buyer').value = '';
       $('sale-qty').value = '1';
+      $('delivery-seg').querySelector('.seg-btn[data-val="0"]').click();
       $('sale-form').classList.add('hidden');
       refresh();
     } catch (err) {
@@ -261,7 +299,7 @@
 
   $('expense-form').addEventListener('submit', async (e) => {
     e.preventDefault();
-    const category = $('expense-category').value;
+    const category = $('expense-item').value === 'outros' ? 'outros' : 'ingredientes';
     const description = $('expense-desc').value.trim();
     const amount = parseMoney($('expense-amount').value);
     if (!description) return toast('Descreva a despesa.', 'err');
@@ -275,8 +313,8 @@
         body: JSON.stringify({ category, description, amount }),
       });
       toast('Despesa registrada ✔', 'ok');
-      $('expense-desc').value = '';
-      $('expense-amount').value = '';
+      $('expense-item').selectedIndex = 0;
+      applyExpenseItem();
       $('expense-form').classList.add('hidden');
       refresh();
     } catch (err) {
