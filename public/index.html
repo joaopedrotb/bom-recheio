@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#5B3A1E">
+  <meta name="description" content="Caderno de vendas e despesas da salgaderia Bom Recheio.">
+  <title>Bom Recheio · Salgaderia</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2064%2064'%3E%3Crect%20width='64'%20height='64'%20rx='16'%20fill='%235B3A1E'/%3E%3Ccircle%20cx='45'%20cy='45'%20r='16'%20fill='%23D9A441'/%3E%3Ctext%20x='31'%20y='45'%20font-family='Arial'%20font-size='28'%20font-weight='700'%20text-anchor='middle'%20fill='%23F3E0B8'%3EBR%3C/text%3E%3C/svg%3E">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+  <!-- ===== CADASTRO / LOGIN ===== -->
+  <div id="auth-view" class="hidden">
+    <div class="auth-wrap">
+      <div class="brand">
+        <div class="brand-logo">BR</div>
+        <h1 class="brand-name">Bom Recheio</h1>
+        <p class="brand-sub">O caderno da nossa salgaderia</p>
+      </div>
+      <div class="auth-card">
+        <div class="tabs" id="auth-tabs" role="tablist" aria-label="Autenticação">
+          <button id="tab-login" type="button" class="tab active" role="tab" aria-selected="true" aria-controls="login-form">Entrar</button>
+          <button id="tab-register" type="button" class="tab" role="tab" aria-selected="false" aria-controls="register-form">Criar conta</button>
+        </div>
+        <form id="login-form" role="tabpanel" aria-labelledby="tab-login">
+          <label class="field">
+            <span class="label">E-mail</span>
+            <input type="email" id="login-email" autocomplete="email" placeholder="voce@email.com" maxlength="254" required>
+          </label>
+          <label class="field">
+            <span class="label">Senha</span>
+            <input type="password" id="login-password" autocomplete="current-password" placeholder="Sua senha" maxlength="100" required>
+          </label>
+          <button class="btn-primary" type="submit">Entrar</button>
+        </form>
+        <form id="register-form" class="hidden" role="tabpanel" aria-labelledby="tab-register">
+          <label class="field">
+            <span class="label">Nome</span>
+            <input type="text" id="reg-name" autocomplete="name" placeholder="Seu nome" maxlength="80" required>
+          </label>
+          <label class="field">
+            <span class="label">E-mail</span>
+            <input type="email" id="reg-email" autocomplete="email" placeholder="voce@email.com" maxlength="254" required>
+          </label>
+          <label class="field">
+            <span class="label">Senha</span>
+            <input type="password" id="reg-password" autocomplete="new-password" placeholder="Mínimo 6 caracteres" minlength="6" maxlength="100" required>
+          </label>
+          <button class="btn-primary" type="submit">Criar minha conta</button>
+        </form>
+        <div id="auth-msg" class="msg" role="alert"></div>
+      </div>
+      <p class="auth-foot">Um caderno compartilhado entre as pessoas da salgaderia (até 3).</p>
+    </div>
+  </div>
+
+  <!-- ===== APLICATIVO ===== -->
+  <div id="app-view" class="hidden">
+    <header class="topbar">
+      <div class="topbar-left">
+        <div class="brand-logo small">BR</div>
+        <div>
+          <h1 class="app-title">Bom Recheio</h1>
+          <div class="app-user" id="user-name"></div>
+        </div>
+      </div>
+      <button id="logout" class="btn-ghost" type="button">Sair</button>
+    </header>
+
+    <main class="container">
+      <div class="actions">
+        <button id="btn-sale" class="action-card in" type="button">
+          <span class="action-icon">+</span>
+          <span class="action-text">Nova venda</span>
+        </button>
+        <button id="btn-expense" class="action-card out" type="button">
+          <span class="action-icon">−</span>
+          <span class="action-text">Nova despesa</span>
+        </button>
+      </div>
+
+      <form id="sale-form" class="panel hidden" novalidate>
+        <h2 class="panel-title">Registrar venda</h2>
+        <div class="field" role="radiogroup" aria-label="Tamanho do pacote">
+          <span class="label">Pacote</span>
+          <div class="seg" id="pkg-seg">
+            <button type="button" class="seg-btn" data-val="50" aria-pressed="false">50 unidades</button>
+            <button type="button" class="seg-btn active" data-val="100" aria-pressed="true">100 unidades</button>
+          </div>
+        </div>
+        <div class="grid2">
+          <label class="field">
+            <span class="label">Quantidade (pacotes)</span>
+            <input type="number" inputmode="numeric" id="sale-qty" min="1" max="100000" step="1" value="1" required>
+          </label>
+          <label class="field">
+            <span class="label">Valor recebido (R$)</span>
+            <input type="text" inputmode="decimal" id="sale-amount" placeholder="0,00" required>
+          </label>
+        </div>
+        <label class="field">
+          <span class="label">Quem comprou</span>
+          <input type="text" id="sale-buyer" placeholder="Nome do cliente" maxlength="200" required>
+        </label>
+        <div class="field" role="radiogroup" aria-label="Forma de pagamento">
+          <span class="label">Forma de pagamento</span>
+          <div class="seg" id="pay-seg">
+            <button type="button" class="seg-btn active" data-val="dinheiro" aria-pressed="true">Dinheiro</button>
+            <button type="button" class="seg-btn" data-val="pix" aria-pressed="false">PIX</button>
+            <button type="button" class="seg-btn" data-val="cartao" aria-pressed="false">Cartão</button>
+          </div>
+        </div>
+        <button id="sale-submit" class="btn-primary" type="submit">Registrar venda</button>
+      </form>
+
+      <form id="expense-form" class="panel hidden" novalidate>
+        <h2 class="panel-title">Registrar despesa</h2>
+        <label class="field">
+          <span class="label">Categoria</span>
+          <select id="expense-category">
+            <option value="ingredientes">Ingredientes</option>
+            <option value="gas">Gás</option>
+            <option value="embalagem">Embalagem</option>
+            <option value="transporte">Transporte</option>
+            <option value="outros">Outros</option>
+          </select>
+        </label>
+        <label class="field">
+          <span class="label">Descrição</span>
+          <input type="text" id="expense-desc" placeholder="Ex: compra de farinha, recarga do gás..." maxlength="200" required>
+        </label>
+        <label class="field">
+          <span class="label">Valor gasto (R$)</span>
+          <input type="text" inputmode="decimal" id="expense-amount" placeholder="0,00" required>
+        </label>
+        <button id="expense-submit" class="btn-primary danger" type="submit">Registrar despesa</button>
+      </form>
+
+      <section class="panel">
+        <div class="period-tabs" id="period-tabs" role="tablist" aria-label="Período">
+          <button type="button" class="ptab active" id="ptab-day" role="tab" aria-selected="true" aria-controls="period-panel" data-period="day">Hoje</button>
+          <button type="button" class="ptab" id="ptab-week" role="tab" aria-selected="false" aria-controls="period-panel" data-period="week">Semana</button>
+          <button type="button" class="ptab" id="ptab-month" role="tab" aria-selected="false" aria-controls="period-panel" data-period="month">Mês</button>
+        </div>
+
+        <div id="period-panel" role="tabpanel" aria-labelledby="ptab-day">
+          <div class="totals">
+            <div class="total-card in">
+              <span class="t-label">Entradas</span>
+              <span class="t-value" id="tot-in">R$ 0,00</span>
+            </div>
+            <div class="total-card out">
+              <span class="t-label">Saídas</span>
+              <span class="t-value" id="tot-out">R$ 0,00</span>
+            </div>
+            <div class="total-card balance">
+              <span class="t-label">Saldo</span>
+              <span class="t-value" id="tot-bal">R$ 0,00</span>
+            </div>
+          </div>
+
+          <div class="units-note" id="units-note"></div>
+
+          <ul id="list" class="list"></ul>
+          <div id="empty" class="empty hidden">Nenhum lançamento neste período.</div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <div id="toast" class="toast hidden" role="status"></div>
+
+  <script src="app.js"></script>
+</body>
+</html>
