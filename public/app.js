@@ -39,6 +39,21 @@
     return Number.isFinite(n) ? n : NaN;
   }
 
+  function bindMoneyInput(id) {
+    const el = $(id);
+    el.addEventListener('input', () => {
+      let v = el.value;
+      const cleaned = v.replace(/[^\d.,]/g, '');
+      const firstSep = cleaned.search(/[.,]/);
+      let out = cleaned;
+      if (firstSep !== -1) {
+        const sep = cleaned[firstSep];
+        out = cleaned.slice(0, firstSep) + sep + cleaned.slice(firstSep + 1).replace(/[.,]/g, '');
+      }
+      if (out !== v) el.value = out;
+    });
+  }
+
   function formatMoney(v) {
     return FORMAT_BRL.format(v || 0);
   }
@@ -192,6 +207,9 @@
 
   bindSeg('pkg-seg', (v) => { salePkg = Number(v); });
   bindSeg('pay-seg', (v) => { salePay = v; });
+
+  bindMoneyInput('sale-amount');
+  bindMoneyInput('expense-amount');
 
   function toggleForm(formId, exceptId) {
     const other = $(exceptId);

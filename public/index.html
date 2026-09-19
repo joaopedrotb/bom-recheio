@@ -100,7 +100,7 @@
           </label>
           <label class="field">
             <span class="label">Valor recebido (R$)</span>
-            <input type="text" inputmode="decimal" id="sale-amount" placeholder="0,00" required>
+            <input type="text" inputmode="decimal" id="sale-amount" placeholder="0,00" maxlength="15" required>
           </label>
         </div>
         <label class="field">
@@ -136,7 +136,7 @@
         </label>
         <label class="field">
           <span class="label">Valor gasto (R$)</span>
-          <input type="text" inputmode="decimal" id="expense-amount" placeholder="0,00" required>
+          <input type="text" inputmode="decimal" id="expense-amount" placeholder="0,00" maxlength="15" required>
         </label>
         <button id="expense-submit" class="btn-primary danger" type="submit">Registrar despesa</button>
       </form>
