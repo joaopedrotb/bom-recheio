@@ -4,4 +4,6 @@ node_modules/
 *.db-shm
 .secret.key
 .env
-npm-debug.log*.dev.vars
+.dev.vars
+.wrangler/
+npm-debug.log*
