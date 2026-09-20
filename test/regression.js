@@ -47,7 +47,7 @@ async function req(method, path, body, headers) {
   await bad({ package_size: 50, quantity: 2, buyer: 'T'.repeat(201), payment_method: 'dinheiro', amount: 10 }, 'buyer 201 chars -> 400');
 
   // cria venda valida para testar delete
-  const sale = await req('POST', '/api/sales', { package_size: 50, quantity: 3, buyer: 'QA Delete', payment_method: 'pix', amount: 99.9 }, { Authorization: 'Bearer ' + token });
+  const sale = await req('POST', '/api/sales', { package_size: 50, quantity: 3, buyer: 'QA Delete', payment_method: 'pix', amount: 99.9, flavor: 'coxinha' }, { Authorization: 'Bearer ' + token });
   log(sale.status === 200 && sale.data.id, 'Venda valida criada id=' + sale.data.id);
   const del = await req('DELETE', '/api/sales/' + sale.data.id, undefined, { Authorization: 'Bearer ' + token });
   log(del.status === 200, 'DELETE venda ok -> ' + del.status);
