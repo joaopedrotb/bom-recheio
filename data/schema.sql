@@ -14,6 +14,7 @@ CREATE TABLE IF NOT EXISTS sales (
   buyer TEXT NOT NULL,
   payment_method TEXT NOT NULL,
   amount REAL NOT NULL,
+  flavor TEXT NOT NULL DEFAULT '',
   registered_by TEXT NOT NULL,
   created_at TEXT NOT NULL
 );

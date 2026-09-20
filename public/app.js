@@ -5,6 +5,16 @@
   const FORMAT_BRL = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
 
   const PAY_LABELS = { dinheiro: 'Dinheiro', pix: 'PIX', cartao: 'Cartão' };
+  const FLAVOR_LABELS = {
+    coxinha: 'Coxinha',
+    bolinha_presunto_queijo: 'Bolinha de presunto e queijo',
+    bolinha_queijo: 'Bolinha de queijo',
+    bolinha_salsicha: 'Bolinha de salsicha',
+    kibe: 'Kibe',
+    empada: 'Empada',
+    risole_carne: 'Risole de carne',
+  };
+
   const CAT_LABELS = {
     ingredientes: 'Ingredientes',
     gas: 'Gás',
@@ -14,6 +24,11 @@
   };
 
   const MAX_QUANTITY = 100000;
+  const PRICES = {
+    100: { dinheiro: 60, pix: 60, cartao: 63 },
+    50: { dinheiro: 30, pix: 30, cartao: 33 },
+  };
+  const PRICE_LABEL = { 100: '100 unidades', 50: '50 unidades' };
 
   const $ = (id) => document.getElementById(id);
 
@@ -214,18 +229,21 @@
     updateSaleTotal();
   });
 
-  bindMoneyInput('sale-products');
   bindMoneyInput('delivery-amount');
   bindMoneyInput('expense-amount');
 
   function updateSaleTotal() {
-    const products = parseMoney($('sale-products').value);
+    const qty = Number($('sale-qty').value);
+    const unit = Number.isInteger(qty) && qty > 0 ? PRICES[salePkg][salePay] : 0;
+    const products = unit * qty;
     const delivery = saleDelivery ? parseMoney($('delivery-amount').value) : 0;
-    const total = (Number.isFinite(products) ? products : 0) + (Number.isFinite(delivery) ? delivery : 0);
+    $('sale-unit-price').textContent = Number.isInteger(qty) && qty > 0 ? formatMoney(PRICES[salePkg][salePay]) : '—';
+    $('sale-products-total').textContent = formatMoney(products);
+    const total = products + (Number.isFinite(delivery) ? delivery : 0);
     $('sale-total').textContent = formatMoney(total);
   }
 
-  $('sale-products').addEventListener('input', updateSaleTotal);
+  $('sale-qty').addEventListener('input', updateSaleTotal);
   $('delivery-amount').addEventListener('input', updateSaleTotal);
 
   function toggleForm(formId, exceptId) {
@@ -266,9 +284,11 @@
   $('sale-form').addEventListener('submit', async (e) => {
     e.preventDefault();
     const rawQty = Number($('sale-qty').value);
-    const products = parseMoney($('sale-products').value);
+    const products = Number.isInteger(rawQty) && rawQty > 0 ? PRICES[salePkg][salePay] * rawQty : 0;
     const delivery = saleDelivery ? parseMoney($('delivery-amount').value) : 0;
     const buyer = $('sale-buyer').value.trim();
+    const flavor = $('sale-sabor').value;
+    if (!flavor) return toast('Escolha o sabor do salgado.', 'err');
     if (!Number.isInteger(rawQty)) return toast('Quantidade deve ser um número inteiro.', 'err');
     if (rawQty < 1 || rawQty > MAX_QUANTITY) return toast('Quantidade deve ser de 1 até ' + MAX_QUANTITY + ' pacotes.', 'err');
     if (!buyer) return toast('Informe quem comprou.', 'err');
@@ -281,10 +301,9 @@
     try {
       await api('/api/sales', {
         method: 'POST',
-        body: JSON.stringify({ package_size: salePkg, quantity: rawQty, buyer, payment_method: salePay, amount }),
+        body: JSON.stringify({ package_size: salePkg, quantity: rawQty, buyer, payment_method: salePay, amount, flavor }),
       });
       toast('Venda registrada ✔', 'ok');
-      $('sale-products').value = '';
       $('sale-buyer').value = '';
       $('sale-qty').value = '1';
       $('delivery-seg').querySelector('.seg-btn[data-val="0"]').click();
@@ -408,6 +427,12 @@
         chip.textContent = PAY_LABELS[item.payment_method] || item.payment_method;
         meta.appendChild(chip);
       }
+      if (item.type === 'entrada' && item.flavor) {
+        const chip = document.createElement('span');
+        chip.className = 'chip chip-sabor';
+        chip.textContent = FLAVOR_LABELS[item.flavor] || item.flavor;
+        meta.appendChild(chip);
+      }
       if (item.type === 'saida' && item.category) {
         const chip = document.createElement('span');
         chip.className = 'chip';
@@ -448,10 +473,48 @@
     });
   }
 
+  async function renderStats() {
+    const saboresEl = $('stats-sabores');
+    const tamanhosEl = $('stats-tamanhos');
+    if (!saboresEl || !tamanhosEl) return everyItem.classList.toggle('hidden', false);
+
+    function draw(container, rows, labelKey, unitKey) {
+      container.innerHTML = '';
+      rows.forEach((r) => {
+        const row = document.createElement('div');
+        row.className = 'rank-row';
+
+        const name = document.createElement('span');
+        name.className = 'rank-name';
+        name.textContent = labelKey !== undefined
+          ? (labelKey === 'flavor' ? FLAVOR_LABELS[r.flavor] || r.flavor : r[labelKey])
+          : String(r[labelKey] !== undefined ? r.labelKey : (r.name || r.sabor || r.tamanho || ''));
+
+        const val = document.createElement('span');
+        val.className = 'rank-val';
+        val.textContent = (unitKey === 'R$' ? formatMoney(r.total) : String(r.packages || r.unidades || r.qtd)) + (unitKey === 'un' ? ' un' : '');
+
+        row.appendChild(name);
+        row.appendChild(val);
+        container.appendChild(row);
+      });
+    }
+
+    try {
+      const data = await api('/api/stats?period=' + encodeURIComponent(period));
+      draw(saboresEl, data.sabores || [], 'flavor', null);
+      draw(tamanhosEl, data.tamanhos || [], 'package_size', 'un');
+      everyItem.classList.toggle('hidden', false);
+    } catch (err) {
+      everyItem.classList.toggle('hidden', false);
+    }
+  }
+
   async function refresh() {
     try {
       const data = await api('/api/transactions?period=' + encodeURIComponent(period));
       renderList(data);
+      renderStats();
     } catch (err) {
       toast(err.message, 'err');
       if (err.status === 401) {

@@ -3,7 +3,13 @@ import * as bcrypt from 'bcryptjs';
 
 const MAX_USERS = 3;
 const PAYMENT_METHODS = ['dinheiro', 'pix', 'cartao'];
+
+const PRICES = {
+  100: { dinheiro: 60, pix: 60, cartao: 63 },
+  50: { dinheiro: 30, pix: 30, cartao: 33 },
+};
 const CATEGORIES = ['ingredientes', 'gas', 'embalagem', 'transporte', 'outros'];
+const SABORES = ['coxinha', 'bolinha_presunto_queijo', 'bolinha_queijo', 'bolinha_salsicha', 'kibe', 'empada', 'risole_carne'];
 const MAX_QUANTITY = 100000;
 const MAX_AMOUNT = 1000000;
 const MAX_BUYER = 200;
@@ -106,6 +112,17 @@ function periodStart(period, from = new Date()) {
   return start;
 }
 
+let schemaReady = false;
+async function ensureSchema(env) {
+  if (schemaReady) return;
+  schemaReady = true;
+  try {
+    await env.DB.prepare("ALTER TABLE sales ADD COLUMN flavor TEXT NOT NULL DEFAULT ''").run();
+  } catch (e) {
+    // coluna já existe em bancos já migrados
+  }
+}
+
 /* ---------------- handlers ---------------- */
 
 async function register(request, env) {
@@ -164,8 +181,12 @@ async function createSale(request, env, user) {
 
   const pkg = Number(body.package_size);
   const qty = Number(body.quantity);
-  const val = Number(body.amount);
+  const entrega =
+    body.delivery === undefined || body.delivery === null || body.delivery === ''
+      ? 0
+      : Number(String(body.delivery).replace(',', '.'));
   const buyer = String(body.buyer || '').trim();
+  const flavor = String(body.flavor || '').trim();
 
   if (pkg !== 50 && pkg !== 100) return json(400, { error: 'Escolha pacote de 50 ou 100 unidades.' });
   if (!Number.isInteger(qty) || qty < 1 || qty > MAX_QUANTITY) {
@@ -175,15 +196,22 @@ async function createSale(request, env, user) {
     return json(400, { error: 'Informe quem comprou (até ' + MAX_BUYER + ' caracteres).' });
   }
   if (!PAYMENT_METHODS.includes(body.payment_method)) return json(400, { error: 'Forma de pagamento inválida.' });
+  if (!Number.isFinite(entrega) || entrega < 0 || entrega > MAX_AMOUNT) {
+    return json(400, { error: 'Informe um valor de entrega válido.' });
+  }
+  if (!SABORES.includes(flavor)) return json(400, { error: 'Escolha o sabor do salgado.' });
+
+  const unit = PRICES[pkg][body.payment_method] || PRICES[pkg].dinheiro;
+  const val = unit * qty + entrega;
   if (!Number.isFinite(val) || val <= 0 || val > MAX_AMOUNT) {
-    return json(400, { error: 'Informe o valor recebido (de R$ 0,01 até R$ 1.000.000).' });
+    return json(400, { error: 'O valor da venda ultrapassou o limite (R$ 1.000.000,00).' });
   }
 
   const now = new Date().toISOString();
   const res = await env.DB.prepare(
-    'INSERT INTO sales (package_size, quantity, units, buyer, payment_method, amount, registered_by, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
+    'INSERT INTO sales (package_size, quantity, units, buyer, payment_method, amount, flavor, registered_by, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)'
   )
-    .bind(pkg, qty, pkg * qty, buyer, body.payment_method, val, user.name, now)
+    .bind(pkg, qty, pkg * qty, buyer, body.payment_method, val, flavor, user.name, now)
     .run();
   return json(200, { id: Number(res.meta.last_row_id), created_at: now });
 }
@@ -229,7 +257,7 @@ async function transactions(request, env) {
   const start = periodStart(period).toISOString();
 
   const sales = await env.DB.prepare(
-    'SELECT id, package_size, quantity, units, buyer, payment_method, amount, registered_by, created_at FROM sales WHERE created_at >= ? ORDER BY created_at DESC'
+    'SELECT id, package_size, quantity, units, buyer, payment_method, amount, flavor, registered_by, created_at FROM sales WHERE created_at >= ? ORDER BY created_at DESC'
   )
     .bind(start)
     .all();
@@ -247,6 +275,7 @@ async function transactions(request, env) {
       title: s.buyer,
       subtitle: s.quantity + ' pacote' + (s.quantity > 1 ? 's' : '') + ' de ' + s.package_size + ' unidades',
       category: null,
+      flavor: s.flavor || '',
       payment_method: s.payment_method,
       amount: Number(s.amount),
       created_at: s.created_at,
@@ -273,6 +302,40 @@ async function transactions(request, env) {
   return json(200, { period, entradas, saidas, saldo: entradas - saidas, unidades, items });
 }
 
+async function stats(request, env) {
+  const url = new URL(request.url);
+  const reqPeriod = url.searchParams.get('period') || '';
+  const period = ['day', 'week', 'month'].includes(reqPeriod) ? reqPeriod : 'day';
+  const start = periodStart(period).toISOString();
+
+  const sabores = await env.DB.prepare(
+    'SELECT flavor, SUM(quantity) AS qtd, COUNT(*) AS vendas, SUM(amount) AS faturamento FROM sales WHERE created_at >= ? GROUP BY flavor ORDER BY qtd DESC, vendas DESC'
+  )
+    .bind(start)
+    .all();
+  const tamanhos = await env.DB.prepare(
+    'SELECT package_size, SUM(quantity) AS qtd, COUNT(*) AS vendas, SUM(amount) AS faturamento FROM sales WHERE created_at >= ? GROUP BY package_size ORDER BY package_size DESC'
+  )
+    .bind(start)
+    .all();
+
+  return json(200, {
+    period,
+    sabores: sabores.results.map((r) => ({
+      flavor: r.flavor || 'Sem sabor',
+      packages: Number(r.qtd),
+      sales: Number(r.vendas),
+      total: Number(r.faturamento),
+    })),
+    tamanhos: tamanhos.results.map((r) => ({
+      package_size: Number(r.package_size),
+      packages: Number(r.qtd),
+      sales: Number(r.vendas),
+      total: Number(r.faturamento),
+    })),
+  });
+}
+
 /* ---------------- roteamento ---------------- */
 
 export default {
@@ -280,6 +343,12 @@ export default {
     const url = new URL(request.url);
     const path = url.pathname;
     const method = request.method;
+
+    try {
+      await ensureSchema(env);
+    } catch (e) {
+      // migração é tolerante a falhas
+    }
 
     if (method === 'POST' && path === '/api/register') {
       if (await rateLimited(env, request)) return json(429, { error: 'Muitas tentativas. Aguarde 1 minuto.' });
@@ -306,6 +375,9 @@ export default {
     }
     if (method === 'GET' && path === '/api/transactions') {
       return withUser(request, env, () => transactions(request, env));
+    }
+    if (method === 'GET' && path === '/api/stats') {
+      return withUser(request, env, () => stats(request, env));
     }
 
     return json(404, { error: 'Não encontrado.' });

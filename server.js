@@ -15,6 +15,11 @@ const KEY_PATH = path.join(DIR, '.secret.key');
 const MAX_USERS = 3;
 const PAYMENT_METHODS = ['dinheiro', 'pix', 'cartao'];
 const CATEGORIES = ['ingredientes', 'gas', 'embalagem', 'transporte', 'outros'];
+const SABORES = ['coxinha', 'bolinha_presunto_queijo', 'bolinha_queijo', 'bolinha_salsicha', 'kibe', 'empada', 'risole_carne'];
+const PRICES = {
+  100: { dinheiro: 60, pix: 60, cartao: 63 },
+  50: { dinheiro: 30, pix: 30, cartao: 33 },
+};
 const MAX_QUANTITY = 100000;
 const MAX_AMOUNT = 1000000;
 const MAX_BUYER = 200;
@@ -66,6 +71,11 @@ CREATE TABLE IF NOT EXISTS expenses (
 CREATE INDEX IF NOT EXISTS idx_sales_created ON sales(created_at);
 CREATE INDEX IF NOT EXISTS idx_expenses_created ON expenses(created_at);
 `);
+
+const salesCols = db.prepare('PRAGMA table_info(sales)').all();
+if (!salesCols.some((c) => c.name === 'flavor')) {
+  db.exec("ALTER TABLE sales ADD COLUMN flavor TEXT NOT NULL DEFAULT '';");
+}
 
 app.disable('x-powered-by');
 app.use((req, res, next) => {
@@ -192,11 +202,14 @@ app.get('/api/me', auth, (req, res) => {
 });
 
 app.post('/api/sales', auth, (req, res) => {
-  const { package_size, quantity, buyer, payment_method, amount } = req.body || {};
+  const { package_size, quantity, buyer, payment_method, delivery, flavor } = req.body || {};
   const pkg = Number(package_size);
   const qty = Number(quantity);
-  const val = Number(amount);
-  const cleanBuyer = String(buyer || '').trim();
+  const cleanBuyer = String(buyer || '').trim().slice(0, MAX_BUYER);
+  const cleanFlavor = String(flavor || '').trim();
+  const entrega = delivery === undefined || delivery === null || delivery === ''
+    ? 0
+    : Number(String(delivery).replace(',', '.'));
 
   if (pkg !== 50 && pkg !== 100) {
     return res.status(400).json({ error: 'Escolha pacote de 50 ou 100 unidades.' });
@@ -204,22 +217,31 @@ app.post('/api/sales', auth, (req, res) => {
   if (!Number.isInteger(qty) || qty < 1 || qty > MAX_QUANTITY) {
     return res.status(400).json({ error: `Quantidade deve ser um número inteiro de 1 até ${MAX_QUANTITY} pacotes.` });
   }
-  if (!cleanBuyer || cleanBuyer.length > MAX_BUYER) {
-    return res.status(400).json({ error: `Informe quem comprou (até ${MAX_BUYER} caracteres).` });
+  if (!cleanBuyer) {
+    return res.status(400).json({ error: 'Informe quem comprou.' });
   }
   if (!PAYMENT_METHODS.includes(payment_method)) {
     return res.status(400).json({ error: 'Forma de pagamento inválida.' });
   }
+  if (!Number.isFinite(entrega) || entrega < 0 || entrega > MAX_AMOUNT) {
+    return res.status(400).json({ error: 'Informe um valor de entrega válido.' });
+  }
+  if (!SABORES.includes(cleanFlavor)) {
+    return res.status(400).json({ error: 'Escolha o sabor do salgado.' });
+  }
+
+  const unit = PRICES[pkg][payment_method] || PRICES[pkg].dinheiro;
+  const val = unit * qty + entrega;
   if (!Number.isFinite(val) || val <= 0 || val > MAX_AMOUNT) {
-    return res.status(400).json({ error: `Informe o valor recebido (de R$ 0,01 até R$ ${MAX_AMOUNT.toLocaleString('pt-BR')}).` });
+    return res.status(400).json({ error: `O valor da venda ultrapassou o limite (R$ ${MAX_AMOUNT.toLocaleString('pt-BR')}).` });
   }
 
   const now = new Date().toISOString();
   const info = db
     .prepare(
-      'INSERT INTO sales (package_size, quantity, units, buyer, payment_method, amount, registered_by, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
+      'INSERT INTO sales (package_size, quantity, units, buyer, payment_method, amount, flavor, registered_by, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)'
     )
-    .run(pkg, Math.floor(qty), pkg * Math.floor(qty), cleanBuyer, payment_method, val, req.user.name, now);
+    .run(pkg, qty, pkg * qty, cleanBuyer, payment_method, val, cleanFlavor, req.user.name, now);
   res.json({ id: Number(info.lastInsertRowid), created_at: now });
 });
 
@@ -284,7 +306,7 @@ app.get('/api/transactions', auth, (req, res) => {
   try {
     sales = db
       .prepare(
-        'SELECT id, package_size, quantity, units, buyer, payment_method, amount, registered_by, created_at FROM sales WHERE created_at >= ? ORDER BY created_at DESC'
+        'SELECT id, package_size, quantity, units, buyer, payment_method, amount, flavor, registered_by, created_at FROM sales WHERE created_at >= ? ORDER BY created_at DESC'
       )
       .all(start);
     expenses = db
@@ -301,6 +323,7 @@ app.get('/api/transactions', auth, (req, res) => {
       id: Number(s.id),
       type: 'entrada',
       title: s.buyer,
+      flavor: s.flavor || '',
       subtitle: `${s.quantity} pacote${s.quantity > 1 ? 's' : ''} de ${s.package_size} unidades`,
       category: null,
       payment_method: s.payment_method,
@@ -327,6 +350,28 @@ app.get('/api/transactions', auth, (req, res) => {
   const unidades = sales.reduce((s, x) => s + Number(x.units), 0);
 
   res.json({ period, entradas, saidas, saldo: entradas - saidas, unidades, items });
+});
+
+app.get('/api/stats', auth, (req, res) => {
+  try {
+    const sabores = db
+      .prepare(
+        "SELECT flavor, SUM(units) AS qtd, COUNT(*) AS vendas FROM sales WHERE flavor <> '' GROUP BY flavor ORDER BY qtd DESC, vendas DESC, flavor ASC"
+      )
+      .all();
+    const tamanhos = db
+      .prepare(
+        'SELECT units AS tamanho, COUNT(*) AS vendas, SUM(units) AS unidades FROM sales GROUP BY units ORDER BY vendas DESC, tamanho ASC'
+      )
+      .all();
+    res.json({
+      sabores: sabores.map((s) => ({ flavor: s.flavor || 'Sem sabor', packages: Number(s.qtd), sales: Number(s.vendas) })),
+      tamanhos: tamanhos.map((t) => ({ package_size: Number(t.tamanho), packages: Number(t.unidades), sales: Number(t.vendas) })),
+    });
+  } catch (e) {
+    console.error('Falha ao ler estatísticas:', e);
+    return res.status(500).json({ error: 'Falha ao ler estatísticas.' });
+  }
 });
 
 app.use((req, res) => res.status(404).json({ error: 'Não encontrado.' }));

@@ -93,15 +93,32 @@
             <button type="button" class="seg-btn active" data-val="100" aria-pressed="true">100 unidades</button>
           </div>
         </div>
+        <label class="field">
+          <span class="label">Sabor do salgado</span>
+          <select id="sale-sabor" required>
+            <option value="" selected disabled>Escolha o sabor</option>
+            <option value="coxinha">Coxinha</option>
+            <option value="bolinha_presunto_queijo">Bolinha de presunto e queijo</option>
+            <option value="bolinha_queijo">Bolinha de queijo</option>
+            <option value="bolinha_salsicha">Bolinha de salsicha</option>
+            <option value="kibe">Kibe</option>
+            <option value="empada">Empada</option>
+            <option value="risole_carne">Risole de carne</option>
+          </select>
+        </label>
         <div class="grid2">
           <label class="field">
             <span class="label">Quantidade (pacotes)</span>
             <input type="number" inputmode="numeric" id="sale-qty" min="1" max="100000" step="1" value="1" required>
           </label>
-          <label class="field">
-            <span class="label">Valor dos produtos (R$)</span>
-            <input type="text" inputmode="decimal" id="sale-products" placeholder="0,00" maxlength="15" required>
-          </label>
+          <div class="field">
+            <span class="label">Preço fixo por pacote (R$)</span>
+            <div class="total-display" id="sale-unit-price">—</div>
+          </div>
+        </div>
+        <div class="field">
+          <span class="label">Total dos produtos (R$)</span>
+          <div class="total-display" id="sale-products-total">R$ 0,00</div>
         </div>
         <div class="field" role="radiogroup" aria-label="Entrega">
           <span class="label">Entrega</span>
@@ -199,6 +216,11 @@
           </div>
 
           <div class="units-note" id="units-note"></div>
+
+          <div class="stats-panel" id="stats-panel" aria-label="Rankings do período">
+            <div class="stats-col" id="stats-sabores"></div>
+            <div class="stats-col" id="stats-tamanhos"></div>
+          </div>
 
           <ul id="list" class="list"></ul>
           <div id="empty" class="empty hidden">Nenhum lançamento neste período.</div>
